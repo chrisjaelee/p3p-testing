@@ -1,0 +1,3 @@
+/home/clee/clee/p3p/build/CMakeFiles/edit_cache.dir
+/home/clee/clee/p3p/build/CMakeFiles/rebuild_cache.dir
+/home/clee/clee/p3p/build/CMakeFiles/p3p_tester.dir
