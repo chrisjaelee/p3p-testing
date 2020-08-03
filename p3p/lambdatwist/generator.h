@@ -1,8 +1,15 @@
-#include <Eigen/Dense>
-#include <Eigen/Core>
+#include "Eigen/Dense"
+#include "Eigen/Core"
 #include <iostream>
 
 #define pi 3.14159265
+
+// template<class T>
+// double get_random_num(T min, T max) {
+//   /* Returns a random double between min and max */
+
+//   return (max - min) * ( (T)rand() / (T)RAND_MAX ) + min;
+// }
 
 template <class T>
 void make_rotation_matrix(const T& theta, const Eigen::Matrix<T,3,1>& w, 
@@ -52,7 +59,7 @@ void world_pts_in_cam(Eigen::Matrix<double,4,3> world_pts,
                       const Eigen::Matrix<double,3,3>& k,
                       const bool& verbose = false){
     bool run = true;
-    // while (run){
+    while (run){
         // creating rotation matrix
         Eigen::Vector3d w; // rotation axis
         w << 0, 0, 1;
@@ -83,6 +90,6 @@ void world_pts_in_cam(Eigen::Matrix<double,4,3> world_pts,
             std::cout << cam_from_world_transform << std::endl;
             std::cout << std::endl;
         }
-    // }
+    }
     
 }

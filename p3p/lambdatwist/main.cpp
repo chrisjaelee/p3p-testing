@@ -1,15 +1,33 @@
 #include <iostream>
 #include <vector>
-#include <math.h>
-#include <chrono>
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
-
 #include "lambdatwist.p3p.h"
 #include "generator.h"
-#include "timer.h"
+#include "utils/cvl/matrix.h"
+// #include "p3p_generator.h"
 
+#define pi 3.14159265
+ 
+using namespace Eigen;
+
+template <class T, unsigned int rows, unsigned int cols>
+Eigen::Matrix<T, rows, cols> to_eigen_matrix(const cvl::Matrix<T, rows, cols>& data){
+    Eigen::Matrix<T, rows, cols> eigen_matrix;
+    for(int i=0; i<rows; i++){
+        for(int j=0; j<cols; j++){
+            eigen_matrix(i,j) = data(i,j);
+        }
+    }
+    return eigen_matrix;
+}
+
+template <class T>
+Eigen::Matrix<T, 3, 1> to_rodrigues(const Eigen::Matrix<T, 3, 3>& data){
+    Eigen::AngleAxis<double> aa (data);
+    return aa.axis() * aa.angle();
+}
 
 void test_p3p(){
     Eigen::Matrix<double,3,3> k;
@@ -35,6 +53,10 @@ void test_p3p(){
     std::cout << triangle_in_cam << std::endl;
     std::cout << std::endl;
 
+     /*-------------------------
+    --------OPENCV PNP----------
+    --------------------------*/
+
     Eigen::Matrix<double, 3, 1> y0;
     Eigen::Matrix<double, 3, 1> y1;
     Eigen::Matrix<double, 3, 1> y2;
@@ -48,11 +70,6 @@ void test_p3p(){
     x0 = {triangle_in_cam(0,0), triangle_in_cam(1,0), 1};
     x1 = {triangle_in_cam(0,1), triangle_in_cam(1,1), 1};
     x2 = {triangle_in_cam(0,2), triangle_in_cam(1,2), 1};
-
-
-     /*-------------------------
-    --------OPENCV PNP----------
-    --------------------------*/
 
     std::vector<cv::Point2d> image_points;
 
@@ -84,45 +101,53 @@ void test_p3p(){
     // double duration_cv = funcTime(cv::solvePnPRansac, model_points, image_points, 
     //                               camera_matrix, dist_coeffs, rotation_vector, translation_vector,
     //                               false, CV_P3P);
-    std::cout << std::endl << "OpenCV" << std::endl;
+    std::cout << std::endl << "---OPENCV---" << std::endl;
     // std::cout << std::endl << duration_cv << " nanoseconds" << std::endl << std::endl;
     for(int i = 0; i < rotation_vector.size(); i++){
         std::cout << "Rotation:" << std::endl << rotation_vector[i] << std::endl;
         std::cout << "Translation:" << std::endl << translation_vector[i] << std::endl << std::endl;
     }
-    
-
 
     /*--------------------------
     --------LAMBDA TWIST--------
     --------------------------*/
 
-    Eigen::Matrix<Eigen::Matrix<double,3,3>,4,1> Rs;
-    Eigen::Matrix<Eigen::Matrix<double,3,1>,4,1> Ts;
+    cvl::Matrix<double, 3, 1> y0_cvl;
+    cvl::Matrix<double, 3, 1> y1_cvl;
+    cvl::Matrix<double, 3, 1> y2_cvl;
+    y0_cvl = {triangle_in_world(0,0), triangle_in_world(1,0), triangle_in_world(2,0)};
+    y1_cvl = {triangle_in_world(0,1), triangle_in_world(1,1), triangle_in_world(2,1)};
+    y2_cvl = {triangle_in_world(0,2), triangle_in_world(1,2), triangle_in_world(2,2)};
 
-    double duration_lambda = funcTime(p3p_lambdatwist<double>, y0, y1, y2, x0, x1, x2, Rs, Ts);
+    cvl::Matrix<double, 3, 1> x0_cvl;
+    cvl::Matrix<double, 3, 1> x1_cvl;
+    cvl::Matrix<double, 3, 1> x2_cvl;
+    x0_cvl = {triangle_in_cam(0,0), triangle_in_cam(1,0), 1};
+    x1_cvl = {triangle_in_cam(0,1), triangle_in_cam(1,1), 1};
+    x2_cvl = {triangle_in_cam(0,2), triangle_in_cam(1,2), 1};
 
-    std::cout << std::endl << "Lambda Twist" << std::endl;
+    cvl::Vector<cvl::Matrix<double,3,3>,4> Rs;
+    cvl::Vector<cvl::Vector<double,3>,4> Ts;
+    cvl::p3p_lambdatwist(y0_cvl, y1_cvl, y2_cvl, x0_cvl, x1_cvl, x2_cvl, Rs, Ts);
 
-    std::cout << std::endl << duration_lambda << " nanoseconds" << std::endl << std::endl;
+    std::cout << std::endl << "---LAMBDATWIST---" << std::endl;
 
-    std::cout << "Rotations:" << std::endl;
-    std::cout << Rs[0] << std::endl << std::endl;
-    std::cout << Rs[1] << std::endl << std::endl;
-    std::cout << Rs[2] << std::endl << std::endl;
-    std::cout << Rs[3] << std::endl << std::endl;
-
-    std::cout << "Translations:" << std::endl;
-    std::cout << Ts[0] << std::endl << std::endl;
-    std::cout << Ts[1] << std::endl << std::endl;
-    std::cout << Ts[2] << std::endl << std::endl;
-    std::cout << Ts[3] << std::endl;
+    for(int i = 0; i<4; i++){
+        std::cout << "Rotation:" << std::endl;
+        std::cout << to_rodrigues(to_eigen_matrix(Rs(i))) << std::endl;
+        
+        std::cout << "Translation:" << std::endl;
+        std::cout << Ts(i) << std::endl;
+        std::cout << std::endl;
+    }
 
 }
 
 int main(){
     
+    
     test_p3p();
+
 
     return 0;
 }
