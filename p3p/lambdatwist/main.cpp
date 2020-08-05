@@ -29,6 +29,35 @@ Eigen::Matrix<T, 3, 1> to_rodrigues(const Eigen::Matrix<T, 3, 3>& data){
     return aa.axis() * aa.angle();
 }
 
+template <class T, unsigned int rows, unsigned int cols>
+T find_error(const Eigen::Matrix<T,rows,cols>& estimate, const Eigen::Matrix<T,rows,cols>& actual){
+    T error{0};
+    Eigen::Matrix<T,rows,cols> temp = estimate - actual;
+    for(int i=0;i<rows;i++){
+        for(int j=0;i<cols;i++){
+            error += (std::abs(temp(i,j))/2);
+        }
+    }
+    return error;
+}
+
+template <class T, unsigned int rows, unsigned int cols>
+int closest_match(const Eigen::Matrix<Eigen::Matrix<T,rows,cols>,Eigen::Dynamic,Eigen::Dynamic>& values, 
+                  const Eigen::Matrix<T,rows,cols>& actual){
+    
+    int index = 0;
+    T min_error = find_error(values(index), actual);
+    
+    for(int i=1;i<values.size();i++){
+        T temp_error = find_error(values(i), actual);
+        if(temp_error < min_error){
+            min_error = temp_error;
+            index = i;
+        }
+    }
+    return index;
+}
+
 void test_p3p(){
     Eigen::Matrix<double,3,3> k;
     k << 1016, 0,   933,
@@ -44,15 +73,17 @@ void test_p3p(){
     Eigen::MatrixXd triangle_in_cam;
 
     Eigen::Vector4d cam_in_world;
-    // cam_in_world << .84, 1.2, 1, 1;
-    cam_in_world << 0,0,0,1;
     
-    world_pts_in_cam(triangle_in_world, triangle_in_cam, cam_in_world, k, true);
-    std::cout << std::endl;
-    std::cout << "Triangle in cam: " << std::endl;
-    std::cout << triangle_in_cam << std::endl;
-    std::cout << std::endl;
+    Eigen::Matrix<double,4,4> transform;
+    transform = world_pts_in_cam(triangle_in_world, triangle_in_cam, cam_in_world, k, false);
+    // std::cout << std::endl << "Triangle in cam: " << std::endl << triangle_in_cam << std::endl << std::endl;
 
+    Eigen::Matrix3d gt_rotation = transform.block(0,0,3,3);
+    Eigen::VectorXd gt_translation = transform.block(0,3,3,1);
+    std::cout << std::endl << "Rotation: " << std::endl << to_rodrigues(gt_rotation) << std::endl << std::endl;
+    std::cout << std::endl << "Translation: " << std::endl << gt_translation << std::endl << std::endl;
+    
+    
      /*-------------------------
     --------OPENCV PNP----------
     --------------------------*/
@@ -91,18 +122,19 @@ void test_p3p(){
                                                       0, k(1,1), k(1,2),
                                                       0, 0, 1);
 
-    std::cout << "Camera Matrix " << std::endl << camera_matrix << std::endl ;
+    // std::cout << "Camera Matrix " << std::endl << camera_matrix << std::endl ;
     
     std::vector<cv::Mat> rotation_vector; 
     std::vector<cv::Mat> translation_vector;
 
     cv::solveP3P(model_points, image_points, camera_matrix, cv::noArray(), 
                  rotation_vector, translation_vector, cv::SOLVEPNP_P3P);
-    // double duration_cv = funcTime(cv::solvePnPRansac, model_points, image_points, 
-    //                               camera_matrix, dist_coeffs, rotation_vector, translation_vector,
-    //                               false, CV_P3P);
+
     std::cout << std::endl << "---OPENCV---" << std::endl;
-    // std::cout << std::endl << duration_cv << " nanoseconds" << std::endl << std::endl;
+
+    // Eigen::Matrix<Eigen::Matrix<double,3,3>,4,1> cv_rotation;
+    // Eigen::Matrix<Eigen::Matrix<double,3,1>,4,1> cv_translation;
+    
     for(int i = 0; i < rotation_vector.size(); i++){
         std::cout << "Rotation:" << std::endl << rotation_vector[i] << std::endl;
         std::cout << "Translation:" << std::endl << translation_vector[i] << std::endl << std::endl;
@@ -128,11 +160,17 @@ void test_p3p(){
 
     cvl::Vector<cvl::Matrix<double,3,3>,4> Rs;
     cvl::Vector<cvl::Vector<double,3>,4> Ts;
-    cvl::p3p_lambdatwist(y0_cvl, y1_cvl, y2_cvl, x0_cvl, x1_cvl, x2_cvl, Rs, Ts);
+    int valid = cvl::p3p_lambdatwist(y0_cvl, y1_cvl, y2_cvl, x0_cvl, x1_cvl, x2_cvl, Rs, Ts);
 
     std::cout << std::endl << "---LAMBDATWIST---" << std::endl;
 
-    for(int i = 0; i<4; i++){
+    // Eigen::Matrix<Eigen::Matrix<double,3,3>,4,1> lambda_rotation;
+    // Eigen::Matrix<Eigen::Matrix<double,3,1>,4,1> lambda_translation;
+    
+    for(int i = 0; i<valid; i++){
+        // lambda_rotation(i) = to_rodrigues(to_eigen_matrix(Rs(i)));
+        // lambda_translation(i) = to_eigen_matrix(Ts(i));
+
         std::cout << "Rotation:" << std::endl;
         std::cout << to_rodrigues(to_eigen_matrix(Rs(i))) << std::endl;
         
@@ -140,6 +178,8 @@ void test_p3p(){
         std::cout << Ts(i) << std::endl;
         std::cout << std::endl;
     }
+    // std::cout << "Rotation: \n" << closest_match<double,3,1>(lambda_rotation, gt_rotation) << std::endl;
+    // std::cout << "Translation: \n" << closest_match<double,3,1>(lambda_translation, gt_translation) << std::endl;
 
 }
 
