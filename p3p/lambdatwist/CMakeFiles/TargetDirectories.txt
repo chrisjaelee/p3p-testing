@@ -1,3 +1,0 @@
-/home/clee/clee/p3p-testing/p3p/lambdatwist/CMakeFiles/edit_cache.dir
-/home/clee/clee/p3p-testing/p3p/lambdatwist/CMakeFiles/rebuild_cache.dir
-/home/clee/clee/p3p-testing/p3p/lambdatwist/CMakeFiles/p3p_tester.dir

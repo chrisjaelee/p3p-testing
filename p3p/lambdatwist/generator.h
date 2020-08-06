@@ -19,11 +19,6 @@ bool is_in_frame(const Eigen::MatrixXd& pts,
     image_coords.row(2) << 1,1,1;
     image_coords = (k*image_coords).eval();
 
-    // std::cout << std::endl;
-    // std::cout << "image_coordinates" << std::endl;
-    // std::cout << image_coords << std::endl;
-    // std::cout << std::endl;
-
     for(int i=0; i<image_coords.cols()-1; i++){        
         if(image_coords(0,i) >= 1920 || image_coords(0,i) < 0){
             return false;
@@ -38,7 +33,9 @@ bool is_in_frame(const Eigen::MatrixXd& pts,
 template<class T, unsigned int rows, unsigned int cols>
 Eigen::Matrix<T, rows, cols> gen_random_matrix(const T& min, const T& max){
     double range = max-min;
+
     Eigen::MatrixXd m = Eigen::MatrixXd::Random(rows,cols); 
+
     m = (m + Eigen::MatrixXd::Constant(rows,cols,1.))*range/2.; 
     m = (m + Eigen::MatrixXd::Constant(rows,cols,min));
     return m;
@@ -53,25 +50,26 @@ double fRand(double fMin, double fMax)
 Eigen::Matrix<double, 4, 4> world_pts_in_cam(Eigen::Matrix<double,4,3> world_pts, 
                       Eigen::MatrixXd &cam_pts, 
                       Eigen::Vector4d &world_from_cam_translation,
-                      const Eigen::Matrix<double,3,3>& k,
-                      const bool& verbose = false){
+                      const Eigen::Matrix<double,3,3>& k){
     bool run = true;
+
+    Eigen::Vector3d w;
+    Eigen::Matrix4d world_from_cam_transform;
+    Eigen::Matrix4d cam_from_world_transform;
+    Eigen::MatrixXd pts_in_cam_frame;
+    
     while (run){
-        // creating rotation matrix
-        Eigen::Vector3d w = gen_random_matrix<double, 3, 1> (0, 5); // rotation axis
-        // w << 0, 0, 1;
+        w = gen_random_matrix<double, 3, 1> (0, 5); // rotation axis
         w.normalize();
-        // std::cout << "TESTING: " << std::endl << gen_random_matrix<double, 3, 1> (0, 5) << std::endl;
         
         world_from_cam_translation = gen_random_matrix<double, 4, 1> (0, 5);
         world_from_cam_translation[3] = 1;
 
-        Eigen::Matrix4d world_from_cam_transform = Eigen::MatrixXd::Identity(4,4);
+        world_from_cam_transform = Eigen::MatrixXd::Identity(4,4);
         world_from_cam_transform.block(0,0,3,3) = make_rotation_matrix(fRand(0.0, 2.0*pi), w);
         world_from_cam_transform.col(world_from_cam_transform.cols()-1) = world_from_cam_translation;
-        Eigen::Matrix4d cam_from_world_transform = world_from_cam_transform.inverse();
+        cam_from_world_transform = world_from_cam_transform.inverse();
         
-        Eigen::MatrixXd pts_in_cam_frame;
         pts_in_cam_frame = cam_from_world_transform*world_pts;
 
         cam_pts.resize(2,3);
@@ -86,12 +84,6 @@ Eigen::Matrix<double, 4, 4> world_pts_in_cam(Eigen::Matrix<double,4,3> world_pts
         // ADD CHECK IF IN FRAME HERE
         run = !is_in_frame(cam_pts, k);
         if (!run){
-            if (verbose){
-                std::cout << std::endl;
-                std::cout << "Camera from world transform:" << std::endl;
-                std::cout << cam_from_world_transform << std::endl;
-                std::cout << std::endl;
-            }
             return world_from_cam_transform.inverse();
         }
     }
