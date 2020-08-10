@@ -47,12 +47,12 @@ Eigen::Matrix<T, rows, cols> cvl_to_eigen(const cvl::Matrix<T, rows, cols>& data
     return eigen_matrix;
 }
 
-Eigen::Matrix<double,3,1> run_lambdatwist(const Eigen::Matrix<double,4,3>& pts_3d,
+Eigen::Matrix<double,4,1> run_lambdatwist(const Eigen::Matrix<double,4,3>& pts_3d,
                      const Eigen::MatrixXd& pts_2d,
                      const Eigen::MatrixXd& gt_rotation,
                      const Eigen::MatrixXd& gt_translation){
 
-    Eigen::Matrix<double,3,1> output = Eigen::MatrixXd::Zero(3,1);
+    Eigen::Matrix<double,4,1> output = Eigen::MatrixXd::Zero(4,1);
 
     cvl::Matrix<double, 3, 1> x0_cvl;
     cvl::Matrix<double, 3, 1> x1_cvl;
@@ -77,21 +77,26 @@ Eigen::Matrix<double,3,1> run_lambdatwist(const Eigen::Matrix<double,4,3>& pts_3
 
     output(2) = std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
 
-    // finding error!
-    output(0) = find_error<double,3,1>(to_rodrigues(cvl_to_eigen(Rs(0))), gt_rotation);
-    output(1) = find_error<double,3,1>(cvl_to_eigen(Ts(0)), gt_translation);
+    if(valid > 0){
+        // finding error!
+        output(0) = find_error<double,3,1>(to_rodrigues(cvl_to_eigen(Rs(0))), gt_rotation);
+        output(1) = find_error<double,3,1>(cvl_to_eigen(Ts(0)), gt_translation);
 
-    double temp_r_error{0};
-    double temp_t_error{0};
+        double temp_r_error{0};
+        double temp_t_error{0};
 
-    for(int i = 1; i<valid; i++){
-        temp_r_error = find_error<double,3,1>(to_rodrigues(cvl_to_eigen(Rs(i))), gt_rotation);
-        temp_t_error = find_error<double,3,1>(cvl_to_eigen(Ts(i)), gt_translation);
+        for(int i = 1; i<valid; i++){
+            temp_r_error = find_error<double,3,1>(to_rodrigues(cvl_to_eigen(Rs(i))), gt_rotation);
+            temp_t_error = find_error<double,3,1>(cvl_to_eigen(Ts(i)), gt_translation);
 
-        if(output(0)+output(1) > temp_r_error+temp_t_error){
-            output(0) = temp_r_error;
-            output(1) = temp_t_error;
+            if(output(0)+output(1) > temp_r_error+temp_t_error){
+                output(0) = temp_r_error;
+                output(1) = temp_t_error;
+            }
         }
+    }
+    else {
+        output(3)=1;
     }
 
     return output;
@@ -113,13 +118,13 @@ Eigen::Matrix<T, rows, cols> cv_to_eigen(const cv::Mat& data){
     return eigen_matrix;
 }
 
-Eigen::Matrix<double,3,1> run_cv_p3p(const Eigen::Matrix<double,4,3>& pts_3d,
+Eigen::Matrix<double,4,1> run_cv_p3p(const Eigen::Matrix<double,4,3>& pts_3d,
                                      const Eigen::MatrixXd& pts_2d,
                                      Eigen::Matrix<double,3,1> gt_rotation,
                                      Eigen::Matrix<double,3,1> gt_translation,
                                      Eigen::Matrix<double,3,3> k){
 
-    Eigen::Matrix<double,3,1> output = Eigen::MatrixXd::Zero(3,1);
+    Eigen::Matrix<double,4,1> output = Eigen::MatrixXd::Zero(4,1);
 
     Eigen::Matrix<double, 3, 1> y0;
     Eigen::Matrix<double, 3, 1> y1;
@@ -166,23 +171,28 @@ Eigen::Matrix<double,3,1> run_cv_p3p(const Eigen::Matrix<double,4,3>& pts_3d,
     output(2) = std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
 
     // finding error!
-    cv_to_eigen<double,3,1>(Rs[0]);
-    // output(0) = find_error<double,3,1>(cv_to_eigen<double,3,1>(Rs[0]), gt_rotation);
-    // output(1) = find_error<double,3,1>(cv_to_eigen<double,3,1>(Ts[0]), gt_translation);
+    if(Rs.size() > 0){
+        cv_to_eigen<double,3,1>(Rs[0]);
+        output(0) = find_error<double,3,1>(cv_to_eigen<double,3,1>(Rs[0]), gt_rotation);
+        output(1) = find_error<double,3,1>(cv_to_eigen<double,3,1>(Ts[0]), gt_translation);
 
-    // double temp_r_error{0};
-    // double temp_t_error{0};
-    
-    // for(int i = 1; i<Rs.size(); i++){
-    //     temp_r_error = find_error<double,3,1>(cv_to_eigen<double,3,1>(Rs[i]), gt_rotation);
-    //     temp_t_error = find_error<double,3,1>(cv_to_eigen<double,3,1>(Ts[i]), gt_translation);
+        double temp_r_error{0};
+        double temp_t_error{0};
+        
+        for(int i = 1; i<Rs.size(); i++){
+            temp_r_error = find_error<double,3,1>(cv_to_eigen<double,3,1>(Rs[i]), gt_rotation);
+            temp_t_error = find_error<double,3,1>(cv_to_eigen<double,3,1>(Ts[i]), gt_translation);
 
-    //     if(output(0)+output(1) > temp_r_error+temp_t_error){
-    //         output(0) = temp_r_error;
-    //         output(1) = temp_t_error;
-    //     }
-    // }
-    // return output;
+            if(output(0)+output(1) > temp_r_error+temp_t_error){
+                output(0) = temp_r_error;
+                output(1) = temp_t_error;
+            }
+        }
+    }
+    else {
+        output(3)=1;
+    }
+    return output;
 }
 
 
@@ -205,12 +215,15 @@ void test_p3p(int tests=1000, const bool& verbose=false){
     
     Eigen::Matrix<double,4,4> transform;
 
-    Eigen::Matrix<double,3,1> lambda_error = Eigen::MatrixXd::Zero(3,1);
-    Eigen::Matrix<double,3,1> cv_error = Eigen::MatrixXd::Zero(3,1);
+    Eigen::Matrix<double,4,1> lambda_error = Eigen::MatrixXd::Zero(4,1);
+    Eigen::Matrix<double,4,1> temp_lambda = Eigen::MatrixXd::Zero(4,1);
+    Eigen::Matrix<double,4,1> cv_error = Eigen::MatrixXd::Zero(4,1);
+    Eigen::Matrix<double,4,1> temp_cv = Eigen::MatrixXd::Zero(4,1);
     Eigen::Matrix3d temp;
 
     Eigen::Matrix<double,3,1> gt_rotation;
     Eigen::MatrixXd gt_translation;
+
 
     for(int i=0;i<tests;i++){
         transform = world_pts_in_cam(triangle_in_world, triangle_in_cam, cam_in_world, k);
@@ -219,16 +232,40 @@ void test_p3p(int tests=1000, const bool& verbose=false){
         gt_rotation = to_rodrigues(temp);
         gt_translation = transform.block(0,3,3,1);
         
-        lambda_error = lambda_error + run_lambdatwist(triangle_in_world, triangle_in_cam, gt_rotation, gt_translation);
-        lambda_error(2) = lambda_error(2)/2;
-        cv_error = cv_error + run_cv_p3p(triangle_in_world, triangle_in_cam, gt_rotation, gt_translation, k);
-        cv_error(2) = cv_error(2)/2;
+        // ADD CHECK FOR FAILURE
+        temp_lambda = run_lambdatwist(triangle_in_world, triangle_in_cam, gt_rotation, gt_translation);
+        if (temp_lambda(3) == 0){
+            lambda_error = lambda_error + temp_lambda;
+            lambda_error(0) = lambda_error(0)/2;
+            lambda_error(1) = lambda_error(1)/2;
+            lambda_error(2) = lambda_error(2)/2;
+        }
+        
+        temp_cv = run_cv_p3p(triangle_in_world, triangle_in_cam, gt_rotation, gt_translation, k);
+        if (temp_lambda(3) == 0){
+            cv_error = cv_error + temp_cv;
+            cv_error(0) = cv_error(0)/2;
+            cv_error(1) = cv_error(1)/2;
+            cv_error(2) = cv_error(2)/2;
+        }
+
+        if(verbose){
+            std::cout << i << "/" << tests << std::endl;
+        }
 
     }
     if(verbose){
+        std::cout << "Accumulated error and average runtime for " << tests << " iterations\n";
         std::cout << std::endl << "---LAMBDATWIST---" << std::endl;
-        std::cout << lambda_error;
+        std::cout << "rotation:      " << lambda_error(0);
+        std::cout << "\ntranslation:   " << lambda_error(1);
+        std::cout << "\navg time (ns): " << lambda_error(2);
+        std::cout << "\nfailures: " << lambda_error(3);
         std::cout << std::endl << "-----OPEN CV-----" << std::endl;
-        std::cout << cv_error << std::endl;
+        std::cout << "rotation:      " << cv_error(0);
+        std::cout << "\ntranslation:   " << cv_error(1);
+        std::cout << "\navg time (ns): " << cv_error(2);
+        std::cout << "\nfailures: " << cv_error(3);
+        std::cout << std::endl;
     }
 }

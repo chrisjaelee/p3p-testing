@@ -2,7 +2,7 @@
 
 int main(){
     
-    test_p3p(10, true);
+    test_p3p(50000, true);
 
-    return 0;  
+    return 0; 
 } 
