@@ -1,9 +1,8 @@
 #pragma once
 #include <iostream>
+#include <Eigen/Dense>
+#include <Eigen/Core>
 
-namespace cvl{
-
-template<class T, int iterations>
 /**
  * @brief refineL
  * @param L
@@ -18,9 +17,10 @@ template<class T, int iterations>
  * For unknown reasons it always works for the correct solution, but not always for the other solutions!
  *
  */
-void gauss_newton_refineL(Vector3<T>& L,
+template<class T, int iterations>
+void gauss_newton_refineL(Eigen::Matrix<T,3,1>& L,
                           T a12, T a13, T a23,
-                          T b12, T b13, T b23 ){
+                          T b12, T b13, T b23){
 
     // const expr makes it easier for the compiler to unroll
     for(int i=0;i<iterations;++i){
@@ -51,7 +51,7 @@ void gauss_newton_refineL(Vector3<T>& L,
 
 
 
-        Vector3<T> r(r1, r2, r3);
+        Eigen::Matrix<T,3,1> r(r1, r2, r3);
 
         // or skip the inverse and make it explicit...
         {
@@ -64,10 +64,11 @@ void gauss_newton_refineL(Vector3<T>& L,
             T v8=dr3dl3;
             T det=(1.0)/(- v0*v5*v7 - v1*v3*v8);
 
-            Matrix<T,3,3> Ji( -v5*v7, -v1*v8,  v1*v5,
-                              -v3*v8,  v0*v8, -v0*v5,
-                              v3*v7, -v0*v7, -v1*v3);
-            Vector3<T> L1=Vector3<T>(L) - det*(Ji*r);
+            Eigen::Matrix<T,3,3> Ji;
+            Ji << -v5*v7, -v1*v8,  v1*v5,
+                   -v3*v8,  v0*v8, -v0*v5,
+                    v3*v7, -v0*v7, -v1*v3;
+            Eigen::Matrix<T,3,1> L1=Eigen::Matrix<T,3,1>(L) - det*(Ji*r);
             //%l=l - g*H\G;%inv(H)*G
             //L=L - g*J\r; //% works because the size is ok!
 
@@ -97,9 +98,6 @@ void gauss_newton_refineL(Vector3<T>& L,
 
     }
     // cout<<i<<endl;
-
-
-}
 
 
 }

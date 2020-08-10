@@ -35,7 +35,6 @@ T find_error(const Eigen::Matrix<T,rows,cols>& estimate, const Eigen::Matrix<T,r
 /*--------------------------
 --------LAMBDA TWIST--------
 --------------------------*/
-//CVL::Matrix TO EIGEN
 template <class T, unsigned int rows, unsigned int cols>
 Eigen::Matrix<T, rows, cols> cvl_to_eigen(const cvl::Matrix<T, rows, cols>& data){
     Eigen::Matrix<T, rows, cols> eigen_matrix;
@@ -54,40 +53,40 @@ Eigen::Matrix<double,4,1> run_lambdatwist(const Eigen::Matrix<double,4,3>& pts_3
 
     Eigen::Matrix<double,4,1> output = Eigen::MatrixXd::Zero(4,1);
 
-    cvl::Matrix<double, 3, 1> x0_cvl;
-    cvl::Matrix<double, 3, 1> x1_cvl;
-    cvl::Matrix<double, 3, 1> x2_cvl;
-    x0_cvl = {pts_3d(0,0), pts_3d(1,0), pts_3d(2,0)};
-    x1_cvl = {pts_3d(0,1), pts_3d(1,1), pts_3d(2,1)};
-    x2_cvl = {pts_3d(0,2), pts_3d(1,2), pts_3d(2,2)};
+    Eigen::Matrix<double, 3, 1> x0_cvl;
+    Eigen::Matrix<double, 3, 1> x1_cvl;
+    Eigen::Matrix<double, 3, 1> x2_cvl;
+    x0_cvl << pts_3d(0,0), pts_3d(1,0), pts_3d(2,0);
+    x1_cvl << pts_3d(0,1), pts_3d(1,1), pts_3d(2,1);
+    x2_cvl << pts_3d(0,2), pts_3d(1,2), pts_3d(2,2);
 
-    cvl::Matrix<double, 3, 1> y0_cvl;
-    cvl::Matrix<double, 3, 1> y1_cvl;
-    cvl::Matrix<double, 3, 1> y2_cvl;
-    y0_cvl = {pts_2d(0,0), pts_2d(1,0), 1};
-    y1_cvl = {pts_2d(0,1), pts_2d(1,1), 1};
-    y2_cvl = {pts_2d(0,2), pts_2d(1,2), 1};
+    Eigen::Matrix<double, 3, 1> y0_cvl;
+    Eigen::Matrix<double, 3, 1> y1_cvl;
+    Eigen::Matrix<double, 3, 1> y2_cvl;
+    y0_cvl << pts_2d(0,0), pts_2d(1,0), 1;
+    y1_cvl << pts_2d(0,1), pts_2d(1,1), 1;
+    y2_cvl << pts_2d(0,2), pts_2d(1,2), 1;
 
-    cvl::Vector<cvl::Matrix<double,3,3>,4> Rs;
-    cvl::Vector<cvl::Vector<double,3>,4> Ts;
+    Eigen::Matrix<Eigen::Matrix<double,3,3>,4,1> Rs;
+    Eigen::Matrix<Eigen::Matrix<double,3,1>,4,1> Ts;
 
     auto t1 = std::chrono::high_resolution_clock::now();
-    int valid = cvl::p3p_lambdatwist(y0_cvl, y1_cvl, y2_cvl, x0_cvl, x1_cvl, x2_cvl, Rs, Ts);
+    int valid = p3p_lambdatwist(y0_cvl, y1_cvl, y2_cvl, x0_cvl, x1_cvl, x2_cvl, Rs, Ts);
     auto t2 = std::chrono::high_resolution_clock::now();
 
     output(2) = std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
 
     if(valid > 0){
         // finding error!
-        output(0) = find_error<double,3,1>(to_rodrigues(cvl_to_eigen(Rs(0))), gt_rotation);
-        output(1) = find_error<double,3,1>(cvl_to_eigen(Ts(0)), gt_translation);
+        output(0) = find_error<double,3,1>(to_rodrigues(Rs(0)), gt_rotation);
+        output(1) = find_error<double,3,1>(Ts(0), gt_translation);
 
         double temp_r_error{0};
         double temp_t_error{0};
 
         for(int i = 1; i<valid; i++){
-            temp_r_error = find_error<double,3,1>(to_rodrigues(cvl_to_eigen(Rs(i))), gt_rotation);
-            temp_t_error = find_error<double,3,1>(cvl_to_eigen(Ts(i)), gt_translation);
+            temp_r_error = find_error<double,3,1>(to_rodrigues(Rs(i)), gt_rotation);
+            temp_t_error = find_error<double,3,1>(Ts(i), gt_translation);
 
             if(output(0)+output(1) > temp_r_error+temp_t_error){
                 output(0) = temp_r_error;
@@ -106,7 +105,6 @@ Eigen::Matrix<double,4,1> run_lambdatwist(const Eigen::Matrix<double,4,3>& pts_3
 /*--------------------------
 --------OPENCV P3P----------
 --------------------------*/
-
 template <class T, unsigned int rows, unsigned int cols>
 Eigen::Matrix<T, rows, cols> cv_to_eigen(const cv::Mat& data){
     Eigen::Matrix<T, rows, cols> eigen_matrix;
@@ -260,12 +258,13 @@ void test_p3p(int tests=1000, const bool& verbose=false){
         std::cout << "rotation:      " << lambda_error(0);
         std::cout << "\ntranslation:   " << lambda_error(1);
         std::cout << "\navg time (ns): " << lambda_error(2);
-        std::cout << "\nfailures: " << lambda_error(3);
+        std::cout << "\nfailures:      " << lambda_error(3);
+
         std::cout << std::endl << "-----OPEN CV-----" << std::endl;
         std::cout << "rotation:      " << cv_error(0);
         std::cout << "\ntranslation:   " << cv_error(1);
         std::cout << "\navg time (ns): " << cv_error(2);
-        std::cout << "\nfailures: " << cv_error(3);
+        std::cout << "\nfailures:      " << cv_error(3);
         std::cout << std::endl;
     }
 }

@@ -1,27 +1,33 @@
-// PUT LINKS HERE
-// #include "solve_cubic.h"
+#pragma once
+/* 
+This code is directly taken from the this paper: 
+https://openaccess.thecvf.com/content_ECCV_2018/papers/Mikael_Persson_Lambda_Twist_An_ECCV_2018_paper.pdf
+The link to the paper also contains a link to the git repo containing original source code
+*/
+#include "solve_cubic.h"
 #include "solve_eig0.h"
 #include "refine_lambda.h"
-#include "utils/cvl/matrix.h"
 #include <iostream>
-#include "Eigen/Dense"
+#include <Eigen/Dense>
+#include <Eigen/Core>
 
 using std::endl;using std::cout;
 
-namespace cvl{
-
-// variables are being intentionally copied
 template<class T, int refinement_iterations=5>
-int p3p_lambdatwist(Vector3<T> y1,
-                    Vector3<T> y2,
-                    Vector3<T> y3,
-                    Vector3<T> x1,
-                    Vector3<T> x2,
-                    Vector3<T> x3,
-                    Vector<cvl::Matrix<T,3,3>,4>& Rs,
-                    Vector<Vector3<T>,4>& Ts){
+int p3p_lambdatwist(const Eigen::Matrix<T, 3, 1>& world_pt1,
+                    const Eigen::Matrix<T, 3, 1>& world_pt2,
+                    const Eigen::Matrix<T, 3, 1>& world_pt3,
+                    const Eigen::Matrix<T, 3, 1>& cam_pt1,
+                    const Eigen::Matrix<T, 3, 1>& cam_pt2,
+                    const Eigen::Matrix<T, 3, 1>& cam_pt3,
+                    Eigen::Matrix<Eigen::Matrix<T,3,3>,4,1>& Rs,
+                    Eigen::Matrix<Eigen::Matrix<T, 3, 1>,4,1>& Ts){
 
-
+    
+    Eigen::Matrix<T, 3, 1> y1 = world_pt1;
+    Eigen::Matrix<T, 3, 1> y2 = world_pt2;
+    Eigen::Matrix<T, 3, 1> y3 = world_pt3;
+    
     // normalize the length of ys, we could expect it, but lets not...
     y1.normalize();
     y2.normalize();
@@ -33,22 +39,18 @@ int p3p_lambdatwist(Vector3<T> y1,
     T b23=-2.0*(y2.dot(y3));
 
 
-    // implicit creation of Vector3<T> can be removed
-    Vector3<T> d12=x1-x2;
-    Vector3<T> d13=x1-x3;
-    Vector3<T> d23=x2-x3;
-    Vector3<T> d12xd13(d12.cross(d13));
+    // implicit creation of Eigen::Matrix<T, 3, 1> can be removed
+    Eigen::Matrix<T, 3, 1> d12=cam_pt1-cam_pt2;
+    Eigen::Matrix<T, 3, 1> d13=cam_pt1-cam_pt3;
+    Eigen::Matrix<T, 3, 1> d23=cam_pt2-cam_pt3;
+    Eigen::Matrix<T, 3, 1> d12xd13(d12.cross(d13));
 
 
-
-    T a12=d12.squaredLength();
-    T a13=d13.squaredLength();
-    T a23=d23.squaredLength();
-
-    //if(abs(D1.determinant())<1e-5 || fabs(D2.determinant())<1e-5)        cout<<"det(D): "<<D1.determinant()<<" "<<D2.determinant()<<endl;
+    T a12=d12.norm();
+    T a13=d13.norm();
+    T a23=d23.norm();
 
 
-    //a*g^3 + b*g^2 + c*g + d = 0
     T c31=-0.5*b13;
     T c23=-0.5*b23;
     T c12=-0.5*b12;
@@ -57,7 +59,6 @@ int p3p_lambdatwist(Vector3<T> y1,
     T s31_squared=1.0-c31*c31;
     T s23_squared=1.0-c23*c23;
     T s12_squared=1.0-c12*c12;
-
 
 
     T p3 = (a13*(a23*s31_squared - a13*s23_squared));
@@ -70,29 +71,15 @@ int p3p_lambdatwist(Vector3<T> y1,
 
     T g=0;
 
-    //p3 is det(D2) so its definietly >0 or its a degenerate case
-
     {
         p3=1.0/p3;
         p2*=p3;
         p1*=p3;
         p0*=p3;
 
-        // get sharpest real root of above...
-
-        g=cubick(p2,p1,p0);
+        g=cubick<T>(p2,p1,p0);
     }
 
-    // we can swap D1,D2 and the coeffs!
-    // oki, Ds are:
-    //D1=M12*XtX(2,2) - M23*XtX(1,1);
-    //D2=M23*XtX(3,3) - M13*XtX(2,2);
-
-    //[    a23 - a23*g,                 (a23*b12)/2,              -(a23*b13*g)/2]
-    //[    (a23*b12)/2,           a23 - a12 + a13*g, (a13*b23*g)/2 - (a12*b23)/2]
-    //[ -(a23*b13*g)/2, (a13*b23*g)/2 - (a12*b23)/2,         g*(a13 - a23) - a12]
-
-    // gain 13 ns...
     T A00=a23*(1.0- g);
     T A01=(a23*b12)*0.5;
     T A02=(a23*b13*g)*(-0.5);
@@ -100,30 +87,25 @@ int p3p_lambdatwist(Vector3<T> y1,
     T A12=b23*(a13*g - a12)*0.5;
     T A22=g*(a13 - a23) - a12;
 
-    Matrix<T,3,3> A(A00,A01,A02,
-                    A01,A11,A12,
-                    A02,A12,A22);
-
+    Eigen::Matrix<T,3,3> A;
+    A << A00,A01,A02,
+          A01,A11,A12,
+          A02,A12,A22;
 
     // get sorted eigenvalues and eigenvectors given that one should be zero...
-    Matrix<T,3,3> V;
-    Vector3<T> L;
-    eigwithknown0(A,V,L);
+    Eigen::Matrix<T,3,3> V;
+    Eigen::Matrix<T,3,1> L;
+    eigwithknown0<T>(A,V,L);
 
     T v=std::sqrt(std::max(T(0),-L(1)/L(0)));
 
 
     int valid=0;
-    Vector<Vector<T,3>,4> Ls;
+    Eigen::Matrix<Eigen::Matrix<T,3,1>,4,1> Ls;
     
 
-    // use the t=Vl with t2,st2,t3 and solve for t3 in t2
-    { //+v
-
+    {
         T s=v;
-        //T w2=T(1.0)/( s*V(0,1) - V(0,0));
-        //T w0=(V(1,0) - s*V(1,1))*w2;
-        //T w1=(V(2,0) - s*V(2,1))*w2;
 
         T w2=T(1.0)/( s*V(1) - V(0));
         T w0=(V(3) - s*V(4))*w2;
@@ -139,7 +121,7 @@ int p3p_lambdatwist(Vector3<T> y1,
 
         if(b*b -4.0*c>=0 ){
             T tau1,tau2;
-            root2real(b,c,tau1,tau2);
+            root2real<T>(b,c,tau1,tau2);
             if(tau1>0){
                 T tau=tau1;
                 T d=a23/(tau*(b23 + tau) + T(1.0));
@@ -172,7 +154,7 @@ int p3p_lambdatwist(Vector3<T> y1,
         }
     }
 
-    { //+v
+    {
         T s=-v;
         T w2=T(1.0)/( s*V(0,1) - V(0,0));
         T w0=(V(1,0) - s*V(1,1))*w2;
@@ -186,7 +168,7 @@ int p3p_lambdatwist(Vector3<T> y1,
         if(b*b -4.0*c>=0){
             T tau1,tau2;
 
-            root2real(b,c,tau1,tau2);
+            root2real<T>(b,c,tau1,tau2);
             if(tau1>0) {
                 T tau=tau1;
                 T d=a23/(tau*(b23 + tau) + T(1.0));
@@ -224,19 +206,17 @@ int p3p_lambdatwist(Vector3<T> y1,
         gauss_newton_refineL<T,refinement_iterations>(Ls[i],a12,a13,a23,b12,b13,b23);        
     }
 
-    Vector3<T> ry1,ry2,ry3;
-    Vector3<T> yd1;
-    Vector3<T> yd2;
-    Vector3<T> yd1xd2;
-    Matrix<T,3,3> X(d12(0),d13(0),d12xd13(0),
-                    d12(1),d13(1),d12xd13(1),
-                    d12(2),d13(2),d12xd13(2));
-    X=X.inverse();
-
-    // cout << "---" << endl << Ls << "---"<< endl;
+    Eigen::Matrix<T, 3, 1> ry1,ry2,ry3;
+    Eigen::Matrix<T, 3, 1> yd1;
+    Eigen::Matrix<T, 3, 1> yd2;
+    Eigen::Matrix<T, 3, 1> yd1xd2;
+    Eigen::Matrix<T,3,3> X;
+    X << d12(0),d13(0),d12xd13(0),
+         d12(1),d13(1),d12xd13(1),
+         d12(2),d13(2),d12xd13(2);
+    X=X.inverse().eval();
 
     for(int i=0;i<valid;++i){
-        //cout<<"Li="<<Ls(i)<<endl;
 
         // compute the rotation:
         ry1=y1*Ls(i)(0);
@@ -247,19 +227,19 @@ int p3p_lambdatwist(Vector3<T> y1,
         yd2=ry1-ry3;
         yd1xd2=yd1.cross(yd2);
 
-        Matrix<T,3,3> Y(yd1(0),yd2(0),yd1xd2(0),
-                        yd1(1),yd2(1),yd1xd2(1),
-                        yd1(2),yd2(2),yd1xd2(2));
+        Eigen::Matrix<T,3,3> Y;
+        Y << yd1(0),yd2(0),yd1xd2(0),
+              yd1(1),yd2(1),yd1xd2(1),
+              yd1(2),yd2(2),yd1xd2(2);
 
 
         Rs[i]=Y*X; // probably not needed cause data can be retrieved other ways
 
-        Ts[i]=(ry1 - Rs[i]*x1 ); // probably not needed cause data can be retrieved other ways
+        Ts[i]=(ry1 - Rs[i]*cam_pt1 ); // probably not needed cause data can be retrieved other ways
     
     }
 
     return valid;
 
 
-}
 }

@@ -2397,16 +2397,18 @@ iostream
 -
 
 /home/clee/clee/p3p/lambdatwist/lambdatwist.p3p.h
+solve_cubic.h
+/home/clee/clee/p3p/lambdatwist/solve_cubic.h
 solve_eig0.h
 /home/clee/clee/p3p/lambdatwist/solve_eig0.h
 refine_lambda.h
 /home/clee/clee/p3p/lambdatwist/refine_lambda.h
-utils/cvl/matrix.h
-/home/clee/clee/p3p/lambdatwist/utils/cvl/matrix.h
 iostream
 -
 Eigen/Dense
-/home/clee/clee/p3p/lambdatwist/Eigen/Dense
+-
+Eigen/Core
+-
 
 /home/clee/clee/p3p/lambdatwist/main.cpp
 test.h
@@ -2415,18 +2417,26 @@ test.h
 /home/clee/clee/p3p/lambdatwist/refine_lambda.h
 iostream
 -
+Eigen/Dense
+-
+Eigen/Core
+-
 
 /home/clee/clee/p3p/lambdatwist/solve_cubic.h
 math.h
+-
+Eigen/Dense
+-
+Eigen/Core
 -
 
 /home/clee/clee/p3p/lambdatwist/solve_eig0.h
 solve_cubic.h
 /home/clee/clee/p3p/lambdatwist/solve_cubic.h
 Eigen/Dense
-/home/clee/clee/p3p/lambdatwist/Eigen/Dense
-utils/cvl/matrix.h
-/home/clee/clee/p3p/lambdatwist/utils/cvl/matrix.h
+-
+Eigen/Core
+-
 
 /home/clee/clee/p3p/lambdatwist/test.h
 iostream
