@@ -51,6 +51,8 @@
         "thread": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "core": "cpp"
+        "core": "cpp",
+        "random": "cpp",
+        "numeric": "cpp"
     }
 }

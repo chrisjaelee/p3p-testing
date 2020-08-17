@@ -1,10 +1,16 @@
-#pragma once
 #include <math.h>
-#include <Eigen/Dense>
-#include <Eigen/Core>
 
 
+
+
+
+namespace cvl{
+
+/// x*x + b*x +c =>
 template<class T> inline bool root2real(T b, T c,T& r1, T& r2){
+
+
+
     T v=b*b -4.0*c;
     if(v<0){
         r1=r2=0.5*b;
@@ -23,8 +29,61 @@ template<class T> inline bool root2real(T b, T c,T& r1, T& r2){
 }
 
 
-template<class T> constexpr T get_numeric_limit(){ 
-    return 1e-13;
+
+
+
+// #define CountCubic 0
+
+// #if CountCubic
+// std::vector<double> samples;
+// int tripples=0;
+// int one_real=0;
+// int doubles=0;
+// int three_real=0;
+// int monotonic=0;
+// int monotonic0=0;
+// int monotonic1=0;
+// int oscillating=0;
+// int purecomplexpair=0;
+
+// #define ADD_CUBIC_COUNT_SAMPLE(sample) samples.reserve(1e7);samples.push_back(sample);
+// mlib::Timer timer_a,timer_b;
+
+// namespace  {
+// class TossSampleClass{
+// public:
+//     ~TossSampleClass(){
+//         cout<<"Cubic count:   "<<mlib::display(samples)<<endl;
+//         cout<<"monotonic:   "<<monotonic<<endl;
+//         cout<<"monotonic0:   "<<monotonic0<<endl;
+//         cout<<"monotonic1:   "<<monotonic1<<endl;
+//         cout<<"oscillating: "<<oscillating<<endl;
+//         cout<<"pure complex pair "<<purecomplexpair<<endl;
+
+//         cout<<"one roots: "<<one_real <<endl;
+//         cout<<"three roots: "<<three_real <<endl;
+//         cout<<"double roots: "<<doubles <<endl;
+//         cout<<"tripple roots: "<<tripples<<endl;
+//         cout<<timer_a<<endl;
+//         cout<<timer_b<<endl;
+
+//     }
+// } tsc;
+// }
+
+// #else
+// #define ADD_CUBIC_COUNT_SAMPLE(sample)
+// #endif
+
+
+
+
+template<class T> constexpr T get_numeric_limit(){ return 1e-13;
+    /*
+                                            cout<<"ef: "<<std::numeric_limits<float>::max_digits10<<endl;
+    cout<<"ed: "<<std::numeric_limits<double>::max_digits10<<endl;
+    cout<<"el: "<<std::numeric_limits<long double>::max_digits10<<endl;
+*/
 }
 template<> constexpr float get_numeric_limit<float>(){
     // abs limit is 9 digits
@@ -85,7 +144,7 @@ template<class T> T cubick(T b, T c, T d){
     if (b*b  >= 3.0*c){
         // h has two stationary points, compute them
         //T t1 = t - std::sqrt(diff);
-        T v = std::sqrt(b*b -3.0*c);
+        T v=std::sqrt(b*b -3.0*c);
         T t1 = (-b - v)/(3.0);
 
         // Check if h(t1) > 0, in this case make a 2-order approx of h around t1
@@ -119,7 +178,7 @@ template<class T> T cubick(T b, T c, T d){
         fx=(((r0+b)*r0+c)*r0+d);
 
 
-        if((cnt<7 || std::abs(fx)>get_numeric_limit<T>())){
+        if((cnt<7 || std::abs(fx)>get_numeric_limit<T>())  ){
             fpx=((T(3.0)*r0+T(2.0)*b)*r0+c);
 
             r0-= fx/fpx;
@@ -127,6 +186,10 @@ template<class T> T cubick(T b, T c, T d){
         else
             break;
     }
+    //timer_b.toc();
 
     return r0;
+}
+
+
 }
