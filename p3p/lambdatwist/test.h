@@ -196,6 +196,7 @@ Eigen::Matrix<double,4,1> run_cv_p3p(const Eigen::Matrix<double,4,3>& pts_3d,
 
 
 void test_p3p(const int& tests=1000, const bool& verbose=false){
+
     Eigen::Matrix<double,3,3> k;
     k << 1016, 0,   933,
          0,    1031, 521,
@@ -220,7 +221,7 @@ void test_p3p(const int& tests=1000, const bool& verbose=false){
 
     Eigen::Matrix<Eigen::Matrix<double,4,1>,7,1> lambda_cases;
     Eigen::Matrix<Eigen::Matrix<double,4,1>,7,1> cv_cases;
-    for (int i=0;i<7;i++){
+    for (int i=0;i<lambda_cases.size();i++){
         if(i<3){
             lambda_cases(i)<<big_number,big_number,big_number,big_number;
             cv_cases(i)<<big_number,big_number,big_number,big_number;
@@ -245,6 +246,7 @@ void test_p3p(const int& tests=1000, const bool& verbose=false){
         
         // ADD CHECK FOR FAILURE
         temp_lambda = run_lambdatwist(triangle_in_world, triangle_in_cam, gt_rotation, gt_translation);
+        
         if (temp_lambda(3) == 0){
 
             // find smallest rotation error
