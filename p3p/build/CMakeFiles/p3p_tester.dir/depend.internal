@@ -344,9 +344,10 @@ CMakeFiles/p3p_tester.dir/main.cpp.o
  /home/clee/clee/cutter-project/deps/install/include/opencv2/xfeatures2d/cuda.hpp
  /home/clee/clee/p3p/lambdatwist/generator.h
  /home/clee/clee/p3p/lambdatwist/lambdatwist.p3p.h
+ /home/clee/clee/p3p/lambdatwist/lambdatwist_pnpransac.h
  /home/clee/clee/p3p/lambdatwist/main.cpp
  /home/clee/clee/p3p/lambdatwist/refine_lambda.h
  /home/clee/clee/p3p/lambdatwist/solve_cubic.h
  /home/clee/clee/p3p/lambdatwist/solve_eig0.h
- /home/clee/clee/p3p/lambdatwist/test.h
+ /home/clee/clee/p3p/lambdatwist/test_pnpransac.h
  /home/clee/clee/p3p/lambdatwist/utils/cvl/matrix.h

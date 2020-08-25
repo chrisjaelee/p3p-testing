@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include "utils/cvl/matrix.h"
 
 namespace cvl{
 
