@@ -42,6 +42,9 @@ template<class T>
 void rand3Pts(std::vector<cvl::Vector3<T>>& selectedWorldPts, std::vector<cvl::Vector3<T>>& selectedImagePts,
               const Eigen::Matrix<T, 3, Eigen::Dynamic>& worldPts, 
               const Eigen::Matrix<T, 3, Eigen::Dynamic>& imagePts){
+    selectedWorldPts.clear();
+    selectedImagePts.clear();
+
     int matLen = worldPts.cols();
 
     std::vector<int> index;
@@ -65,8 +68,8 @@ void rand3Pts(std::vector<cvl::Vector3<T>>& selectedWorldPts, std::vector<cvl::V
 template<class T>
 void reprojectPts(const Eigen::Matrix<T,3,Eigen::Dynamic>& worldPts, 
                         Eigen::Matrix<T,3,Eigen::Dynamic>& camPts, // output
-                  const Eigen::Matrix<T,3,3>& rotation,
-                  const Eigen::Matrix<T,3,1>& translation, // camera location
+                  const Eigen::Matrix<T,3,3>& camFromWorldRotation,
+                  const Eigen::Matrix<T,3,1>& camFromWorldTranslation, // camera location
                   const Eigen::Matrix<T,3,3>& k){
     Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> ptsInCamFrame = worldPts;
     ptsInCamFrame.conservativeResize(4, worldPts.cols());
@@ -74,12 +77,10 @@ void reprojectPts(const Eigen::Matrix<T,3,Eigen::Dynamic>& worldPts,
         ptsInCamFrame(3,i) = 1;
     }
 
-    Eigen::Matrix<T,4,4> worldFromCamTransform; 
-    worldFromCamTransform.block(0,0,3,3) = rotation;
-    worldFromCamTransform.block(0,3,3,1) = translation;
-    worldFromCamTransform.row(3) << 0,0,0,1;
-    
-    Eigen::Matrix<T,4,4> camFromWorldTransform = worldFromCamTransform.inverse();
+    Eigen::Matrix<T,4,4> camFromWorldTransform; 
+    camFromWorldTransform.block(0,0,3,3) = camFromWorldRotation;
+    camFromWorldTransform.block(0,3,3,1) = camFromWorldTranslation;
+    camFromWorldTransform.row(3) << 0,0,0,1;
     
     ptsInCamFrame = camFromWorldTransform*ptsInCamFrame;
 
@@ -87,8 +88,8 @@ void reprojectPts(const Eigen::Matrix<T,3,Eigen::Dynamic>& worldPts,
     camPts = ptsInCamFrame.block(0,0,3,ptsInCamFrame.cols());
 
     for(int i=0;i<camPts.cols();i++){
-        camPts(0,i) = camPts(0,i)/ptsInCamFrame(2,i);
-        camPts(1,i) = camPts(1,i)/ptsInCamFrame(2,i);
+        camPts(0,i) = camPts(0,i)/camPts(2,i);
+        camPts(1,i) = camPts(1,i)/camPts(2,i);
         camPts(2,i) = 1;
     }
 
@@ -112,8 +113,6 @@ int numInliers(const Eigen::Matrix<T,3,Eigen::Dynamic>& inputPts,
     int inliers = 0;
 
     for(int i=0;i<inputPts.cols();i++){
-
-        
         T distance = 0;
         for(int j=0;j<2;j++){
             distance += pow(inputPts(j,i)-reprojectedPts(j,i),2);
@@ -178,27 +177,18 @@ void twistPnPRansac(const std::vector<cv::Point3_<T>>& worldPts, const std::vect
     for(int iter=0; iter<iterationsCount; iter++){
         rand3Pts(selectedWorldPts, selectedImagePts, eigenWorldPts, eigenImagePts);
         
-        // int valid = cvl::p3p_lambdatwist(selectedImagePts[0],selectedImagePts[1],selectedImagePts[2],
-        //                                  selectedWorldPts[0],selectedWorldPts[1],selectedWorldPts[2],
-        //                                  Rs, Ts);
-        int valid = cvl::p3p_lambdatwist(eigenToCVL<T,3,1>(eigenImagePts.col(0)),
-                                         eigenToCVL<T,3,1>(eigenImagePts.col(1)),
-                                         eigenToCVL<T,3,1>(eigenImagePts.col(2)),
-                                         eigenToCVL<T,3,1>(eigenWorldPts.col(0)),
-                                         eigenToCVL<T,3,1>(eigenWorldPts.col(1)),
-                                         eigenToCVL<T,3,1>(eigenWorldPts.col(2)),
+        int valid = cvl::p3p_lambdatwist(selectedImagePts[0],selectedImagePts[1],selectedImagePts[2],
+                                         selectedWorldPts[0],selectedWorldPts[1],selectedWorldPts[2],
                                          Rs, Ts);
-        std::cout << "valid:\n" << valid << "\n\n";
         
         for(int i=0; i<valid; i++){
             rotation = cvlToEigen<T,3,3>(Rs[i]);
-            std::cout << "rotation:\n" << to_rodrigues(rotation) << "\n\n";
             translation = cvlToEigen<T,3,1>(Ts[i]);
             reprojectPts(eigenWorldPts, reprojectedPts, 
                          rotation, translation, 
                          eigenK); 
 
-            inliers = numInliers(eigenImagePts, reprojectedPts, reprojectionError);
+            inliers = numInliers((eigenK*eigenImagePts).eval(), reprojectedPts, reprojectionError);
             if(inliers > bestInliers){
                 bestInliers = inliers;
                 bestR = rotation;
@@ -206,12 +196,13 @@ void twistPnPRansac(const std::vector<cv::Point3_<T>>& worldPts, const std::vect
             }
         }
         
-        T w = bestInliers/eigenImagePts.cols();
-        T numIters = log10(1-confidence)/log10(1-pow(w,NUM_INNER_VALUES));
-        if(numIters < iter){
-            break;
+        if(bestInliers > 0){
+            double w = (double)bestInliers/eigenImagePts.cols();
+            double numIters = log(1-confidence)/log(1-pow(w,NUM_INNER_VALUES));
+            // std::cout << "w: " << w << "\nnumIters: " << numIters << "\nconfidence: " << confidence << "\nbestInliers: " << bestInliers << "\n";
+            if(numIters < iter){
+                break;
+            }
         }
-
     }
-    std::cout << bestR;
 } 

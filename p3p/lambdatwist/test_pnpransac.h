@@ -15,6 +15,7 @@
 
 
 void test_pnpransac(const int& tests=1000, const bool& verbose=false){
+    srand(1234);
 
     Eigen::Matrix<double,3,3> k;
     k << 1016, 0,   933,
@@ -27,7 +28,7 @@ void test_pnpransac(const int& tests=1000, const bool& verbose=false){
 
     Eigen::Vector4d cam_in_world;
     
-    Eigen::Matrix<double,4,4> transform;
+    Eigen::Matrix<double,4,4> cam_from_world_transform;
 
     Eigen::Matrix3d temp;
 
@@ -45,11 +46,11 @@ void test_pnpransac(const int& tests=1000, const bool& verbose=false){
     cv::Mat camera_matrix = (cv::Mat_<double>(3,3) << k(0,0), 0, k(0,2), 
                                                       0, k(1,1), k(1,2),
                                                       0, 0, 1);
-    // for(int i=0;i<tests;i++){
+    for(int i=0;i<tests;i++){
         while(true){
             pts_in_world = gen_pt_cloud<3000>();
 
-            transform = world_pts_in_cam(pts_in_world, pts_in_cam, cam_in_world, k);
+            cam_from_world_transform = world_pts_in_cam(pts_in_world, pts_in_cam, k);
         
             for(int j=0;j<pts_in_cam.cols();j++){
                 image_pts.push_back(cv::Point2d(pts_in_cam(0,j), pts_in_cam(1,j)));
@@ -60,16 +61,15 @@ void test_pnpransac(const int& tests=1000, const bool& verbose=false){
                 break;
             }
         }
-        temp = transform.block(0,0,3,3);
-        std::cout << to_rodrigues(temp) << "\n\n";
         
-
-        // temp = transform.block(0,0,3,3);
-        // gt_rotation = to_rodrigues(temp);
-        // gt_translation = transform.block(0,3,3,1);
-
         twistPnPRansac(world_pts,image_pts,camera_matrix,Rs,Ts);
-        cv::solvePnPRansac(world_pts,image_pts,camera_matrix,cv::noArray(),r,t);
-        std::cout << "\n\ncv output" << r;
-    // }
+
+        cv::solvePnPRansac(world_pts,image_pts,camera_matrix,cv::noArray(),r,t,2);
+        std::cout << "cv rotation:\n" << r;
+        std::cout << "\n\ncv translation:\n" << t;
+
+        temp = cam_from_world_transform.block(0,0,3,3);
+        std::cout << "\n\ngt rotation:\n" << to_rodrigues(temp) << "\n";
+        std::cout << "gt translation:\n" << cam_from_world_transform.col(3) << "\n";
+    }
 }
