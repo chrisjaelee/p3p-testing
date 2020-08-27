@@ -2,7 +2,7 @@
 #include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
 #include "lambdatwist.p3p.h"
-#include "utils/cvl/matrix.h"
+#include "matrix.h"
 #include <math.h>
 
 template <class T, unsigned int rows, unsigned int cols>
@@ -36,6 +36,13 @@ Eigen::Matrix<T, rows, cols> cvToEigen(const cv::Mat& data){
         }
     }
     return eigenMatrix;
+}
+
+
+template <class T>
+Eigen::Matrix<T, 3, 1> to_rodrigues(const Eigen::Matrix<T, 3, 3>& data){
+    Eigen::AngleAxis<double> aa (data);
+    return aa.axis() * aa.angle();
 }
 
 
@@ -120,14 +127,6 @@ int numInliers(const Eigen::Matrix<T,3,Eigen::Dynamic>& inputPts,
     }
 
     return inliers;
-}
-
-
-
-template <class T>
-Eigen::Matrix<T, 3, 1> to_rodrigues(const Eigen::Matrix<T, 3, 3>& data){
-    Eigen::AngleAxis<double> aa (data);
-    return aa.axis() * aa.angle();
 }
 
 

@@ -1,6 +1,6 @@
 #include "solve_cubic.h"
 #include "Eigen/Dense"
-#include "utils/cvl/matrix.h"
+#include "matrix.h"
 
 namespace cvl{
 /**

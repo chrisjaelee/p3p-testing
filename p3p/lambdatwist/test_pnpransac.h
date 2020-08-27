@@ -4,7 +4,7 @@
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
 #include "generator.h"
-#include "utils/cvl/matrix.h"
+#include "matrix.h"
 #include "lambdatwist_pnpransac.h"
 
 #define pi 3.14159265
@@ -110,7 +110,7 @@ void test_pnpransac(const int& tests=1000, const bool& verbose=false){
         cv_tError = (cv_tError + findError(cvVecToEigen(t),gt_translation))/2;
 
         if(verbose){
-            std::cout << "\n\n------------\nTEST: " << i+1 << "/" << tests;
+            std::cout << "\n\n------ACCUMULATED ERRORS------\nTEST: " << i+1 << "/" << tests;
             std::cout << "\n\ntwist rError:\n" << twist_rError;
             std::cout << "\ntwist tError:\n" << twist_tError;
             std::cout << "\ntwist timer:\n" << twist_time;
@@ -120,12 +120,4 @@ void test_pnpransac(const int& tests=1000, const bool& verbose=false){
             std::cout << "\ncv timer:\n" << cv_time;
         }
     }
-
-    // std::cout << "\n------------\ntwist rError:\n" << twist_rError;
-    // std::cout << "\ntwist tError:\n" << twist_tError;
-    // std::cout << "\ntwist timer:\n" << twist_time;
-
-    // std::cout << "\n\ncv rError:\n" << cv_rError;
-    // std::cout << "\ncv tError:\n" << cv_tError;
-    // std::cout << "\ncv timer:\n" << cv_time;
 }

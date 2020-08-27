@@ -2,7 +2,7 @@
 // #include "solve_cubic.h"
 #include "solve_eig0.h"
 #include "refine_lambda.h"
-#include "utils/cvl/matrix.h"
+#include "matrix.h"
 #include <iostream>
 #include "Eigen/Dense"
 
